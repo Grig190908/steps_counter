@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "82920151687",
+    "project_id": "steps-counter1",
+    "storage_bucket": "steps-counter1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:82920151687:android:9c884c2872fb1490f73622",
+        "android_client_info": {
+          "package_name": "com.example.stepscounter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDtTU4HIMW6_WbJhox3kncVYD7wZiz3nM0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

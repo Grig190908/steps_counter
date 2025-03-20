@@ -1,0 +1,57 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="20dp"
+    android:orientation="vertical"
+    android:gravity="center_horizontal">
+
+    <EditText
+        android:id="@+id/emailSignIn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Enter Email"
+        android:inputType="textEmailAddress"
+        android:importantForAccessibility="yes"
+        android:autofillHints="emailAddress"
+        android:minHeight="48dp"
+        android:paddingVertical="12dp"
+        android:layout_marginBottom="10dp"/>
+
+    <EditText
+        android:id="@+id/passwordSignIn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Enter Password"
+        android:inputType="textPassword"
+        android:importantForAccessibility="yes"
+        android:autofillHints="password"
+        android:minHeight="48dp"
+        android:paddingVertical="12dp"
+        android:layout_marginBottom="20dp"/>
+
+    <Button
+        android:id="@+id/btnSignIn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Sign In"
+        android:importantForAccessibility="yes"
+        android:minHeight="48dp"
+        android:layout_marginBottom="20dp"/>
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:layout_gravity="center"/>
+
+    <TextView
+        android:id="@+id/textSignUp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Don't have an account? Sign Up"
+        android:textColor="@android:color/holo_blue_dark"
+        android:gravity="center"
+        android:importantForAccessibility="yes"
+        android:layout_marginTop="10dp"/>
+</LinearLayout>
