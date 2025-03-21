@@ -1,25 +1,9 @@
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:padding="16dp"
-    android:background="@color/white">
+    android:background="#90EE90"> <!-- Light green color code -->
 
-    <!-- User Email Display -->
-    <TextView
-        android:id="@+id/userEmailTextView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Logged in as: "
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:textColor="@color/black"
-        android:layout_marginTop="20dp"
-        android:gravity="center" />
-
-    <!-- Step Counter Display -->
+    <!-- Step Count Text in the center -->
     <TextView
         android:id="@+id/stepCountTextView"
         android:layout_width="wrap_content"
@@ -28,24 +12,11 @@
         android:textSize="28sp"
         android:textStyle="bold"
         android:textColor="@color/black"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="32dp"
-        android:gravity="center" />
+        android:layout_centerInParent="true"
+        android:gravity="center"
+        android:layout_marginTop="16dp" />
 
-    <!-- Reset Steps Button -->
-    <Button
-        android:id="@+id/btnResetSteps"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Reset Steps"
-        android:textSize="18sp"
-        android:backgroundTint="@color/gray"
-        android:textColor="@color/white"
-        android:paddingHorizontal="24dp"
-        android:paddingVertical="12dp"
-        android:layout_marginTop="20dp" />
-
-    <!-- Sign Out Button -->
+    <!-- Sign Out Button in the upper right corner -->
     <Button
         android:id="@+id/btnSignOut"
         android:layout_width="wrap_content"
@@ -56,6 +27,9 @@
         android:textColor="@color/white"
         android:paddingHorizontal="24dp"
         android:paddingVertical="12dp"
-        android:layout_marginTop="20dp" />
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp" />
 
-</LinearLayout>
+</RelativeLayout>

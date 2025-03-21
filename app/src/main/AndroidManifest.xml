@@ -1,8 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.stepscounter"> <!-- Ensure the package name matches -->
 
-    <!-- Add the ACTIVITY_RECOGNITION permission here -->
+    <!-- Add the required permissions -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/> <!-- Added for Android 13+ -->
 
     <application
         android:allowBackup="true"
@@ -28,6 +29,5 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
     </application>
 </manifest>

@@ -17,6 +17,7 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 
 public class SignUpActivity extends AppCompatActivity {
 
@@ -93,7 +94,24 @@ public class SignUpActivity extends AppCompatActivity {
                         btnSignUp.setEnabled(true);
 
                         if (task.isSuccessful()) {
-                            Toast.makeText(SignUpActivity.this, "Sign Up Successful!", Toast.LENGTH_SHORT).show();
+                            FirebaseUser user = mAuth.getCurrentUser();
+                            if (user != null) {
+                                user.sendEmailVerification()
+                                        .addOnCompleteListener(new OnCompleteListener<Void>() {
+                                            @Override
+                                            public void onComplete(@NonNull Task<Void> task) {
+                                                if (task.isSuccessful()) {
+                                                    Toast.makeText(SignUpActivity.this,
+                                                            "Registration successful! Please verify your email.",
+                                                            Toast.LENGTH_SHORT).show();
+                                                } else {
+                                                    Toast.makeText(SignUpActivity.this,
+                                                            "Failed to send verification email: " + task.getException().getMessage(),
+                                                            Toast.LENGTH_SHORT).show();
+                                                }
+                                            }
+                                        });
+                            }
                             startActivity(new Intent(SignUpActivity.this, MainActivity.class));
                             finish();
                         } else {
