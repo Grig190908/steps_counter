@@ -3,6 +3,7 @@ package com.example.stepscounter;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -10,13 +11,15 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
@@ -25,6 +28,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private SensorManager sensorManager;
     private Sensor accelerometerSensor;
     private TextView stepCountTextView;
+    private ImageView characterImageView;
     private int steps = 0;
 
     private FirebaseAuth mAuth;
@@ -35,6 +39,20 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     private float lastX, lastY, lastZ;
     private long lastUpdate;
+
+    // SharedPreferences keys
+    private static final String PREFS_NAME = "step_prefs";
+    private static final String STEP_COUNT_KEY = "step_count";
+
+    // Character images for different step stages
+    private int[] characterImages = {
+            R.drawable.character_stage_1, // 0 - 4999 steps
+            R.drawable.character_stage_2, // 5000 - 9999 steps
+            R.drawable.character_stage_3, // 10000 - 14999 steps
+            R.drawable.character_stage_4, // 15000 - 19999 steps
+            R.drawable.character_stage_5, // 20000 - 24999 steps
+            R.drawable.character_stage_6  // 25000+ steps
+    };
 
     @SuppressLint("MissingInflatedId")
     @Override
@@ -52,8 +70,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
 
         stepCountTextView = findViewById(R.id.stepCountTextView);
+        characterImageView = findViewById(R.id.characterImageView);
         btnSignOut = findViewById(R.id.btnSignOut);
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+
+        // Load saved steps
+        steps = loadStepCount();
+        updateUI();
 
         if (checkSelfPermission(android.Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
@@ -65,6 +88,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         btnSignOut.setOnClickListener(v -> {
             mAuth.signOut();
+            saveStepCount(0); // Reset steps when signing out
             Toast.makeText(MainActivity.this, "Signed out successfully", Toast.LENGTH_SHORT).show();
             startActivity(new Intent(MainActivity.this, SignInActivity.class));
             finish();
@@ -87,7 +111,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             long currentTime = System.currentTimeMillis();
 
-            if (currentTime - lastUpdate > 200) { // Adjusted for better accuracy
+            if (currentTime - lastUpdate > 200) { // Check for shake every 200ms
                 long diffTime = currentTime - lastUpdate;
                 lastUpdate = currentTime;
 
@@ -103,13 +127,31 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                 Log.d(TAG, "Shake Magnitude: " + shakeMagnitude);
 
-                if (shakeMagnitude > 12) { // Adjusted threshold for better step detection
+                if (shakeMagnitude > 12) { // Sensitivity threshold
                     steps++;
-                    stepCountTextView.setText("Steps: " + steps);
-                    Log.d(TAG, "Step detected. Total steps: " + steps);
+                    saveStepCount(steps);
+                    updateUI();
                 }
             }
         }
+    }
+
+    private void updateUI() {
+        stepCountTextView.setText("Steps: " + steps);
+        int index = Math.min(steps / 5000, characterImages.length - 1);
+        characterImageView.setImageResource(characterImages[index]);
+    }
+
+    private void saveStepCount(int steps) {
+        SharedPreferences sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putInt(STEP_COUNT_KEY, steps);
+        editor.apply();
+    }
+
+    private int loadStepCount() {
+        SharedPreferences sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        return sharedPreferences.getInt(STEP_COUNT_KEY, 0);
     }
 
     @Override
