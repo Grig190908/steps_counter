@@ -15,23 +15,6 @@
         android:layout_centerInParent="true"
         android:gravity="center"
         android:layout_marginTop="16dp" />
-
-    <!-- Sign Out Button in the upper right corner -->
-    <Button
-        android:id="@+id/btnSignOut"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Sign Out"
-        android:textSize="18sp"
-        android:backgroundTint="@android:color/black"
-        android:textColor="@android:color/white"
-        android:paddingHorizontal="24dp"
-        android:paddingVertical="12dp"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentEnd="true"
-        android:layout_marginTop="16dp"
-        android:layout_marginEnd="16dp" />
-
     <!-- Character Image in the center -->
     <ImageView
         android:id="@+id/characterImageView"
@@ -41,5 +24,16 @@
         android:layout_below="@id/stepCountTextView"
         android:layout_marginTop="50dp"
         android:src="@drawable/character_stage_1" />
+    <Button
+        android:id="@+id/btnProfile"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Profile" />
 
+    <Button
+        android:id="@+id/btnSettings"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="60dp"
+        android:text="Online" />
 </RelativeLayout>

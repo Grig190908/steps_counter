@@ -1,9 +1,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.stepscounter"> <!-- Ensure the package name matches -->
+    package="com.example.stepscounter">
 
-    <!-- Add the required permissions -->
+    <!-- Required Permissions -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="com.samsung.android.health.permission.READ_STEP_COUNT"/>
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/> <!-- Added for Android 13+ -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/> <!-- For Android 13+ -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/> <!-- For Android 14+ -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH"/> <!-- For health-related service -->
 
     <application
         android:allowBackup="true"
@@ -15,19 +20,27 @@
 
         <!-- Declare SignUpActivity -->
         <activity android:name=".SignUpActivity"
-            android:exported="false"/> <!-- Set to false if not exported -->
-
+            android:exported="false"/>
+        <activity android:name=".Online" />
+        <activity android:name=".Profile" />
         <!-- Declare SignInActivity -->
         <activity android:name=".SignInActivity"
-            android:exported="false"/> <!-- Set to false if not exported -->
+            android:exported="false"/>
 
-        <!-- Declare MainActivity with intent filter -->
+        <!-- Declare MainActivity with Intent Filter -->
         <activity android:name=".MainActivity"
-            android:exported="true"> <!-- Set to true for launchable activity -->
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- Declare StepService for background step tracking -->
+        <service
+            android:name=".StepService"
+            android:exported="false"
+            android:foregroundServiceType="health" />
+        <receiver android:name=".ResetStepsReceiver"
+            android:exported="true" />
     </application>
 </manifest>

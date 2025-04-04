@@ -1,6 +1,7 @@
 package com.example.stepscounter;
 
-import android.annotation.SuppressLint;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -9,6 +10,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Button;
@@ -17,44 +19,38 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
+import java.util.Calendar;
+
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
     private SensorManager sensorManager;
-    private Sensor accelerometerSensor;
+    private Sensor stepDetectorSensor;
     private TextView stepCountTextView;
     private ImageView characterImageView;
     private int steps = 0;
-
     private FirebaseAuth mAuth;
-    private Button btnSignOut;
 
     private static final int ACTIVITY_RECOGNITION_REQUEST_CODE = 100;
-    private static final String TAG = "StepCounter";
-
-    private float lastX, lastY, lastZ;
-    private long lastUpdate;
-
-    // SharedPreferences keys
     private static final String PREFS_NAME = "step_prefs";
     private static final String STEP_COUNT_KEY = "step_count";
 
-    // Character images for different step stages
     private int[] characterImages = {
-            R.drawable.character_stage_1, // 0 - 4999 steps
-            R.drawable.character_stage_2, // 5000 - 9999 steps
-            R.drawable.character_stage_3, // 10000 - 14999 steps
-            R.drawable.character_stage_4, // 15000 - 19999 steps
-            R.drawable.character_stage_5, // 20000 - 24999 steps
-            R.drawable.character_stage_6  // 25000+ steps
+            R.drawable.character_stage_1,
+            R.drawable.character_stage_2,
+            R.drawable.character_stage_3,
+            R.drawable.character_stage_4,
+            R.drawable.character_stage_5,
+            R.drawable.character_stage_6
     };
 
-    @SuppressLint("MissingInflatedId")
+    @RequiresApi(api = Build.VERSION_CODES.Q)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -71,67 +67,52 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         stepCountTextView = findViewById(R.id.stepCountTextView);
         characterImageView = findViewById(R.id.characterImageView);
-        btnSignOut = findViewById(R.id.btnSignOut);
+        Button btnProfile = findViewById(R.id.btnProfile); // Profile Button
+        Button btnOnline = findViewById(R.id.btnSettings); // Online Button (renamed as "Online")
+
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
 
-        // Load saved steps
         steps = loadStepCount();
         updateUI();
+        scheduleDailyReset();
 
         if (checkSelfPermission(android.Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
                     new String[]{android.Manifest.permission.ACTIVITY_RECOGNITION},
                     ACTIVITY_RECOGNITION_REQUEST_CODE);
         } else {
-            initAccelerometer();
+            initStepDetector();
         }
+        btnProfile.setOnClickListener(v -> {
+            startActivity(new Intent(MainActivity.this, Profile.class));
+        });
 
-        btnSignOut.setOnClickListener(v -> {
-            mAuth.signOut();
-            saveStepCount(0); // Reset steps when signing out
-            Toast.makeText(MainActivity.this, "Signed out successfully", Toast.LENGTH_SHORT).show();
-            startActivity(new Intent(MainActivity.this, SignInActivity.class));
-            finish();
+        btnOnline.setOnClickListener(v -> {
+            startActivity(new Intent(MainActivity.this, Online.class));
         });
     }
 
-    private void initAccelerometer() {
+    private void initStepDetector() {
         if (sensorManager != null) {
-            accelerometerSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-            if (accelerometerSensor == null) {
-                Toast.makeText(this, "Accelerometer not available!", Toast.LENGTH_LONG).show();
+            stepDetectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR);
+            if (stepDetectorSensor == null) {
+                Toast.makeText(this, "Step Detector not available!", Toast.LENGTH_LONG).show();
             } else {
-                sensorManager.registerListener(this, accelerometerSensor, SensorManager.SENSOR_DELAY_UI);
+                sensorManager.registerListener(this, stepDetectorSensor, SensorManager.SENSOR_DELAY_UI);
             }
         }
     }
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            long currentTime = System.currentTimeMillis();
+        if (event.sensor.getType() == Sensor.TYPE_STEP_DETECTOR) {
+            steps++;
+            saveStepCount(steps);
+            updateUI();
+            Log.d("StepCounter", "Step detected. Total steps: " + steps);
 
-            if (currentTime - lastUpdate > 200) { // Check for shake every 200ms
-                long diffTime = currentTime - lastUpdate;
-                lastUpdate = currentTime;
-
-                float deltaX = event.values[0] - lastX;
-                float deltaY = event.values[1] - lastY;
-                float deltaZ = event.values[2] - lastZ;
-
-                lastX = event.values[0];
-                lastY = event.values[1];
-                lastZ = event.values[2];
-
-                float shakeMagnitude = (float) Math.sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ);
-
-                Log.d(TAG, "Shake Magnitude: " + shakeMagnitude);
-
-                if (shakeMagnitude > 12) { // Sensitivity threshold
-                    steps++;
-                    saveStepCount(steps);
-                    updateUI();
-                }
+            if (steps % 5000 == 0) {
+                sendCongratulatoryNotification("Great job!", "You've walked " + steps + " steps! Keep going!");
             }
         }
     }
@@ -154,10 +135,28 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         return sharedPreferences.getInt(STEP_COUNT_KEY, 0);
     }
 
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
-        // Not used, but required by SensorEventListener
+    private void sendCongratulatoryNotification(String title, String message) {
+        NotificationHelper notificationHelper = new NotificationHelper(this);
+        notificationHelper.sendNotification(title, message);
     }
+
+    private void scheduleDailyReset() {
+        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        Intent intent = new Intent(this, ResetStepsReceiver.class);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+
+        if (alarmManager != null) {
+            alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), AlarmManager.INTERVAL_DAY, pendingIntent);
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {}
 
     @Override
     protected void onPause() {
@@ -170,8 +169,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     protected void onResume() {
         super.onResume();
-        if (accelerometerSensor != null) {
-            sensorManager.registerListener(this, accelerometerSensor, SensorManager.SENSOR_DELAY_UI);
+        if (stepDetectorSensor != null) {
+            sensorManager.registerListener(this, stepDetectorSensor, SensorManager.SENSOR_DELAY_UI);
         }
     }
 
@@ -180,7 +179,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == ACTIVITY_RECOGNITION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                initAccelerometer();
+                initStepDetector();
             } else {
                 Toast.makeText(this, "Permission denied!", Toast.LENGTH_SHORT).show();
             }
