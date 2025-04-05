@@ -9,6 +9,7 @@ firebaseDatabase = "21.0.0"
 firebaseStorage = "21.0.1"
 googleServices = "4.4.2"
 gradle = "7.4.2"
+health = "3.0.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
 espressoCore = "3.6.1"
@@ -36,6 +37,7 @@ firebase-database = { module = "com.google.firebase:firebase-database", version.
 firebase-storage = { module = "com.google.firebase:firebase-storage", version.ref = "firebaseStorage" }
 google-services = { module = "com.google.gms:google-services", version.ref = "googleServices" }
 gradle = { module = "com.android.tools.build:gradle", version.ref = "gradle" }
+health = { module = "com.samsung.android.sdk:health", version.ref = "health" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
