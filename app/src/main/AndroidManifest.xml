@@ -2,13 +2,13 @@
     package="com.example.stepscounter">
 
     <!-- Required Permissions -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <uses-permission android:name="com.samsung.android.health.permission.READ_STEP_COUNT"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="com.samsung.android.health.permission.READ_STEP_COUNT" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/> <!-- For Android 13+ -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/> <!-- For Android 14+ -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH"/> <!-- For health-related service -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:allowBackup="true"
@@ -19,28 +19,50 @@
         android:theme="@style/Theme.AppCompat.Light.NoActionBar">
 
         <!-- Declare SignUpActivity -->
-        <activity android:name=".SignUpActivity"
-            android:exported="false"/>
-        <activity android:name=".Online" />
-        <activity android:name=".Profile" />
+        <activity
+            android:name=".SignUpActivity"
+            android:exported="false" />
+
         <!-- Declare SignInActivity -->
-        <activity android:name=".SignInActivity"
-            android:exported="false"/>
+        <activity
+            android:name=".SignInActivity"
+            android:exported="false" />
+
+        <!-- Declare Profile Activity -->
+        <activity
+            android:name=".Profile"
+            android:exported="false" />
+
+        <!-- Declare Online Activity -->
+        <activity
+            android:name=".Online"
+            android:exported="false" />
 
         <!-- Declare MainActivity with Intent Filter -->
-        <activity android:name=".MainActivity"
+        <activity
+            android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <!-- Declare StepService for background step tracking -->
+
+        <!-- Declare StepCounterService for background step tracking -->
         <service
-            android:name=".StepService"
+            android:name=".StepCounterService"
+            android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="health" />
-        <receiver android:name=".ResetStepsReceiver"
-            android:exported="true" />
+
+        <!-- Declare ResetStepsReceiver for daily step reset -->
+        <receiver
+            android:name=".ResetStepsReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

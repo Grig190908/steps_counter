@@ -1,6 +1,5 @@
 package com.example.stepscounter;
 
-import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Context;
@@ -10,8 +9,8 @@ import androidx.core.app.NotificationCompat;
 
 public class NotificationHelper {
 
-    private static final String CHANNEL_ID = "steps_channel";
-    private Context context;
+    public static final String CHANNEL_ID = "step_counter_channel";
+    private final Context context;
 
     public NotificationHelper(Context context) {
         this.context = context;
@@ -20,27 +19,29 @@ public class NotificationHelper {
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            CharSequence name = "Step Notifications";
-            String description = "Notifications for step achievements";
-            int importance = NotificationManager.IMPORTANCE_DEFAULT;
-            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
-            channel.setDescription(description);
-
-            NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
-            notificationManager.createNotificationChannel(channel);
+            NotificationChannel channel = new NotificationChannel(
+                    CHANNEL_ID,
+                    "Step Counter Notifications",
+                    NotificationManager.IMPORTANCE_DEFAULT
+            );
+            NotificationManager manager = context.getSystemService(NotificationManager.class);
+            if (manager != null) {
+                manager.createNotificationChannel(channel);
+            }
         }
     }
 
     public void sendNotification(String title, String message) {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_walk)  // Replace with your icon
+                .setSmallIcon(R.drawable.ic_notification) // Replace with your icon
                 .setContentTitle(title)
                 .setContentText(message)
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT);
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setAutoCancel(true);
 
-        NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        if (notificationManager != null) {
-            notificationManager.notify(0, builder.build());
+        NotificationManager manager = context.getSystemService(NotificationManager.class);
+        if (manager != null) {
+            manager.notify((int) System.currentTimeMillis(), builder.build());
         }
     }
 }

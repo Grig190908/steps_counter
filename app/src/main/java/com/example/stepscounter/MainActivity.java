@@ -1,9 +1,12 @@
 package com.example.stepscounter;
 
+import android.annotation.SuppressLint;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.hardware.Sensor;
@@ -19,29 +22,31 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
+import java.util.Locale;
 
-public class MainActivity extends AppCompatActivity implements SensorEventListener {
+public class MainActivity extends AppCompatActivity {
 
-    private SensorManager sensorManager;
-    private Sensor stepDetectorSensor;
     private TextView stepCountTextView;
     private ImageView characterImageView;
-    private int steps = 0;
     private FirebaseAuth mAuth;
+    private int steps = 0;
 
     private static final int ACTIVITY_RECOGNITION_REQUEST_CODE = 100;
     private static final String PREFS_NAME = "step_prefs";
     private static final String STEP_COUNT_KEY = "step_count";
+    private static final String LAST_RESET_DATE_KEY = "last_reset_date";
+    private static final String STEP_UPDATE_ACTION = "com.example.stepscounter.STEP_UPDATE";
 
-    private int[] characterImages = {
+    private final int[] characterImages = {
             R.drawable.character_stage_1,
             R.drawable.character_stage_2,
             R.drawable.character_stage_3,
@@ -50,7 +55,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             R.drawable.character_stage_6
     };
 
-    @RequiresApi(api = Build.VERSION_CODES.Q)
+    private final BroadcastReceiver stepUpdateReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            steps = intent.getIntExtra("steps", 0);
+            updateUI();
+        }
+    };
+
+    @SuppressLint("NewApi")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -67,53 +80,37 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         stepCountTextView = findViewById(R.id.stepCountTextView);
         characterImageView = findViewById(R.id.characterImageView);
-        Button btnProfile = findViewById(R.id.btnProfile); // Profile Button
-        Button btnOnline = findViewById(R.id.btnSettings); // Online Button (renamed as "Online")
-
-        sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        Button btnProfile = findViewById(R.id.btnProfile);
+        Button btnOnline = findViewById(R.id.btnSettings);
 
         steps = loadStepCount();
         updateUI();
         scheduleDailyReset();
 
-        if (checkSelfPermission(android.Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
+        // Request permissions
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+                checkSelfPermission(android.Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
                     new String[]{android.Manifest.permission.ACTIVITY_RECOGNITION},
                     ACTIVITY_RECOGNITION_REQUEST_CODE);
         } else {
-            initStepDetector();
+            startStepCounterService();
         }
-        btnProfile.setOnClickListener(v -> {
-            startActivity(new Intent(MainActivity.this, Profile.class));
-        });
 
-        btnOnline.setOnClickListener(v -> {
-            startActivity(new Intent(MainActivity.this, Online.class));
-        });
+        // Register buttons
+        btnProfile.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, Profile.class)));
+        btnOnline.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, Online.class)));
+
+        // Register receiver for step updates
+        registerReceiver(stepUpdateReceiver, new IntentFilter(STEP_UPDATE_ACTION), Context.RECEIVER_NOT_EXPORTED);
     }
 
-    private void initStepDetector() {
-        if (sensorManager != null) {
-            stepDetectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR);
-            if (stepDetectorSensor == null) {
-                Toast.makeText(this, "Step Detector not available!", Toast.LENGTH_LONG).show();
-            } else {
-                sensorManager.registerListener(this, stepDetectorSensor, SensorManager.SENSOR_DELAY_UI);
-            }
-        }
-    }
-
-    @Override
-    public void onSensorChanged(SensorEvent event) {
-        if (event.sensor.getType() == Sensor.TYPE_STEP_DETECTOR) {
-            steps++;
-            saveStepCount(steps);
-            updateUI();
-            Log.d("StepCounter", "Step detected. Total steps: " + steps);
-
-            if (steps % 5000 == 0) {
-                sendCongratulatoryNotification("Great job!", "You've walked " + steps + " steps! Keep going!");
-            }
+    private void startStepCounterService() {
+        Intent serviceIntent = new Intent(this, StepCounterService.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent);
+        } else {
+            startService(serviceIntent);
         }
     }
 
@@ -127,17 +124,24 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         SharedPreferences sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.putInt(STEP_COUNT_KEY, steps);
+        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+        editor.putString(LAST_RESET_DATE_KEY, today);
         editor.apply();
     }
 
     private int loadStepCount() {
         SharedPreferences sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+        String lastResetDate = sharedPreferences.getString(LAST_RESET_DATE_KEY, "");
+        if (!today.equals(lastResetDate)) {
+            // Reset steps if the date has changed
+            SharedPreferences.Editor editor = sharedPreferences.edit();
+            editor.putInt(STEP_COUNT_KEY, 0);
+            editor.putString(LAST_RESET_DATE_KEY, today);
+            editor.apply();
+            return 0;
+        }
         return sharedPreferences.getInt(STEP_COUNT_KEY, 0);
-    }
-
-    private void sendCongratulatoryNotification(String title, String message) {
-        NotificationHelper notificationHelper = new NotificationHelper(this);
-        notificationHelper.sendNotification(title, message);
     }
 
     private void scheduleDailyReset() {
@@ -149,28 +153,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         calendar.set(Calendar.HOUR_OF_DAY, 0);
         calendar.set(Calendar.MINUTE, 0);
         calendar.set(Calendar.SECOND, 0);
+        calendar.add(Calendar.DAY_OF_MONTH, 1); // Set for next midnight
 
         if (alarmManager != null) {
             alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), AlarmManager.INTERVAL_DAY, pendingIntent);
-        }
-    }
-
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {}
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        if (sensorManager != null) {
-            sensorManager.unregisterListener(this);
-        }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        if (stepDetectorSensor != null) {
-            sensorManager.registerListener(this, stepDetectorSensor, SensorManager.SENSOR_DELAY_UI);
         }
     }
 
@@ -179,10 +165,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == ACTIVITY_RECOGNITION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                initStepDetector();
+                startStepCounterService();
             } else {
                 Toast.makeText(this, "Permission denied!", Toast.LENGTH_SHORT).show();
             }
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(stepUpdateReceiver);
     }
 }
