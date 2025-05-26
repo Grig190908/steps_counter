@@ -9,13 +9,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.util.Log;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -44,6 +39,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String PREFS_NAME = "step_prefs";
     private static final String STEP_COUNT_KEY = "step_count";
     private static final String LAST_RESET_DATE_KEY = "last_reset_date";
+    private static final String MONTHLY_STEPS_KEY_PREFIX = "monthly_steps_";
     private static final String STEP_UPDATE_ACTION = "com.example.stepscounter.STEP_UPDATE";
 
     private final int[] characterImages = {
@@ -59,6 +55,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             steps = intent.getIntExtra("steps", 0);
+            saveStepCount(steps);
             updateUI();
         }
     };
@@ -81,8 +78,6 @@ public class MainActivity extends AppCompatActivity {
         stepCountTextView = findViewById(R.id.stepCountTextView);
         characterImageView = findViewById(R.id.characterImageView);
         Button btnProfile = findViewById(R.id.btnProfile);
-        Button btnOnline = findViewById(R.id.btnSettings);
-
         steps = loadStepCount();
         updateUI();
         scheduleDailyReset();
@@ -99,10 +94,13 @@ public class MainActivity extends AppCompatActivity {
 
         // Register buttons
         btnProfile.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, Profile.class)));
-        btnOnline.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, Online.class)));
-
         // Register receiver for step updates
-        registerReceiver(stepUpdateReceiver, new IntentFilter(STEP_UPDATE_ACTION), Context.RECEIVER_NOT_EXPORTED);
+        IntentFilter filter = new IntentFilter(STEP_UPDATE_ACTION);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(stepUpdateReceiver, filter, RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(stepUpdateReceiver, filter);
+        }
     }
 
     private void startStepCounterService() {
@@ -133,8 +131,9 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
         String lastResetDate = sharedPreferences.getString(LAST_RESET_DATE_KEY, "");
+
         if (!today.equals(lastResetDate)) {
-            // Reset steps if the date has changed
+            saveToMonthlyTotal(sharedPreferences.getInt(STEP_COUNT_KEY, 0));
             SharedPreferences.Editor editor = sharedPreferences.edit();
             editor.putInt(STEP_COUNT_KEY, 0);
             editor.putString(LAST_RESET_DATE_KEY, today);
@@ -142,6 +141,26 @@ public class MainActivity extends AppCompatActivity {
             return 0;
         }
         return sharedPreferences.getInt(STEP_COUNT_KEY, 0);
+    }
+
+    private void saveToMonthlyTotal(int dailySteps) {
+        SharedPreferences sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        String monthKey = getMonthKey();
+        int currentMonthlySteps = sharedPreferences.getInt(monthKey, 0);
+        currentMonthlySteps += dailySteps;
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putInt(monthKey, currentMonthlySteps);
+        editor.apply();
+    }
+
+    private String getMonthKey() {
+        SimpleDateFormat monthFormat = new SimpleDateFormat("yyyy_MM", Locale.getDefault());
+        return MONTHLY_STEPS_KEY_PREFIX + monthFormat.format(new Date());
+    }
+
+    public int getMonthlySteps() {
+        SharedPreferences sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        return sharedPreferences.getInt(getMonthKey(), 0);
     }
 
     private void scheduleDailyReset() {
@@ -153,7 +172,8 @@ public class MainActivity extends AppCompatActivity {
         calendar.set(Calendar.HOUR_OF_DAY, 0);
         calendar.set(Calendar.MINUTE, 0);
         calendar.set(Calendar.SECOND, 0);
-        calendar.add(Calendar.DAY_OF_MONTH, 1); // Set for next midnight
+        calendar.set(Calendar.MILLISECOND, 0);
+        calendar.add(Calendar.DAY_OF_MONTH, 1);
 
         if (alarmManager != null) {
             alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), AlarmManager.INTERVAL_DAY, pendingIntent);
@@ -175,6 +195,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        unregisterReceiver(stepUpdateReceiver);
+        try {
+            unregisterReceiver(stepUpdateReceiver);
+        } catch (IllegalArgumentException e) {
+            // Receiver not registered, ignore
+        }
     }
 }

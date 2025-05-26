@@ -12,10 +12,14 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+
 public class Profile extends AppCompatActivity {
 
     private static final String PREFS_NAME = "step_prefs";
-    private static final String STEP_COUNT_KEY = "step_count";
+    private static final String MONTHLY_STEPS_KEY_PREFIX = "monthly_steps_";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,10 +37,9 @@ public class Profile extends AppCompatActivity {
             emailTextView.setText("Email: " + user.getEmail());
         }
 
-        // Load steps from SharedPreferences
-        SharedPreferences sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        int steps = sharedPreferences.getInt(STEP_COUNT_KEY, 0);
-        monthlyStepsTextView.setText("Monthly Steps: " + steps);
+        // Load monthly steps
+        int monthlySteps = getMonthlySteps();
+        monthlyStepsTextView.setText("Monthly Steps: " + monthlySteps);
 
         // Sign out
         btnSignOut.setOnClickListener(v -> {
@@ -50,5 +53,16 @@ public class Profile extends AppCompatActivity {
             startActivity(new Intent(Profile.this, MainActivity.class));
             finish();
         });
+    }
+
+    private int getMonthlySteps() {
+        SharedPreferences sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        String monthKey = getMonthKey();
+        return sharedPreferences.getInt(monthKey, 0);
+    }
+
+    private String getMonthKey() {
+        SimpleDateFormat monthFormat = new SimpleDateFormat("yyyy_MM", Locale.getDefault());
+        return MONTHLY_STEPS_KEY_PREFIX + monthFormat.format(new Date());
     }
 }
